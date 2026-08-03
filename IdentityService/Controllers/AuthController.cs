@@ -21,8 +21,8 @@ public class AuthController : ControllerBase
         _db = db;
         _jwtService = JwtService;
     }
-   [HttpPost("login")]
-   public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         //Find activer user by email
         var user = await _db.Users
@@ -46,6 +46,47 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("register")]
-    [Authorize (Roles = "Admin")]
-    public async Task<IActionResult>
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    {
+        if (await _db.Users.AnyAsync(u => u.Email == request.Email))
+            return BadRequest(new { message = "Email already exist" });
+
+        var user = new User
+        {
+            FullName = request.FullName,
+            Email = request.Email,
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
+            Role = request.Role,
+            DepartmentId = request.DepartmentId
+        };
+
+        _db.Users.Add(user);
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "User created successfully", userId = user.Id });
+
+    }
+
+    [HttpGet("users")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResuly> GetUsers()
+    {
+        var users = await _db.Users
+            .Select(uint => new
+            {
+                u.Id, u.FullName, u.Email, u.Role, u.IsActive, u.DepartmentId
+            }).ToListAsync();  
+    }
+
+    [HttpPut("users/{id}/deactivate")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Deactivate (int id)
+    {
+        var user = await _db.Users.FindAsync(id);
+        if (user == null) return NotFound();
+        user.IsActive = falser;
+        await _db.SaveChangesAsync();
+        return Ok(new { message = "User deactivated" });
+    }
 }

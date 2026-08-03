@@ -1,34 +1,29 @@
-﻿using IdentityService.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using IdentityService.Models;
 
-namespace IdentityService.Data
+namespace IdentityService.Data;
+
+public class AppDbContext : DbContext
 {
-    public class AppDbContext : DbContext
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+    public DbSet<User> Users { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // EF create "Users" table in the database
-        public DbSet<User> Users { get; set; }
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Email)
+            .IsUnique();
 
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        modelBuilder.Entity<User>().HasData(new User
         {
-            // Email must be unique - no duplicate accounts
-            modelBuilder.Entity<User>()
-                .HasIndex(u => u.Email)
-                .IsUnique();
-
-            //Seed a default admin user so can login right away 
-            modelBuilder.Entity<User>().HasData(new User
-            {
-                Id = 1,
-                FullName = "Super Admin",
-                Email = "admin@hrms.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
-                Role = "Addmin",
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow
-            });
-        }
-        
+            Id = 1,
+            FullName = "Super Admin",
+            Email = "admin@hrms.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
+            Role = "Admin",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow
+        });
     }
 }
