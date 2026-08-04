@@ -1,5 +1,4 @@
 ﻿using LeaveService.DTOs;
-using LeaveService.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -15,6 +14,8 @@ public interface ILeaveService
     Task<IEnumerable<LeaveRequestResponse>> GetAllLeavesAsync();
     Task<(bool Success, string Message)> ReviewLeaveAsync(
         int leaveId, int reviewerId, ReviewLeaveRequest request);
-    Task<object> GetBalanceAsync(int userId);
+    Task<LeaveBalanceResponse> GetBalanceAsync(int userId, DateTime joinDate);
     int CalculateWorkingDays(DateTime startDate, DateTime endDate);
+    int CalculateAnnualEntitlement(DateTime joinDate, int year);
+    Task ProcessYearEndCarryForwardAsync(int userId, DateTime joinDate);
 }

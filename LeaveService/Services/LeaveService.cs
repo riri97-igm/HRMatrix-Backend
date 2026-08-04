@@ -19,6 +19,78 @@ public class LeaveService : ILeaveService
         _balanceRepo = balanceRepo;
     }
 
+    // Entitlement based on service years 
+    public int CalculateAnnualEntitlement(DateTime joinDate, int year)
+    {
+        // Calculate service years at start of the given year
+        var referenceDate = new DateTime(year, 1, 1);
+        var serviceYears = (referenceDate - joinDate).Days / 365;
+
+        return serviceYears switch
+        {
+            < 1 => 8,
+            < 3 => 10,
+            < 6 => 14,
+            < 11 => 16,
+            _ => 18
+        };
+    }
+
+    // Calculate working days (exclude weekends) 
+    public int CalculateWorkingDays(DateTime startDate, DateTime endDate)
+    {
+        int workingDays = 0;
+        var current = startDate;
+
+        while (current <= endDate)
+        {
+            if (current.DayOfWeek != DayOfWeek.Saturday &&
+                current.DayOfWeek != DayOfWeek.Sunday)
+                workingDays++;
+            current = current.AddDays(1);
+        }
+
+        return workingDays;
+    }
+
+    // Get or create balance for a year 
+    private async Task<LeaveBalance> GetOrCreateBalanceAsync(
+        int userId, int year, DateTime joinDate)
+    {
+        var balance = await _balanceRepo.GetByUserAndYearAsync(userId, year);
+        if (balance != null) return balance;
+
+        // Auto create with carry forward from previous year
+        var entitlement = CalculateAnnualEntitlement(joinDate, year);
+        var carryForward = 0;
+
+        // Get previous year balance and calculate carry forward
+        var prevBalance = await _balanceRepo.GetByUserAndYearAsync(userId, year - 1);
+        if (prevBalance != null)
+        {
+            var prevRemaining = prevBalance.AnnualTotal
+                + prevBalance.CarryForward
+                - prevBalance.AnnualUsed;
+            carryForward = Math.Max(0, prevRemaining);
+        }
+
+        balance = new LeaveBalance
+        {
+            UserId = userId,
+            Year = year,
+            AnnualTotal = entitlement,
+            AnnualUsed = 0,
+            CarryForward = carryForward,
+            MedicalTotal = 14,
+            MedicalUsed = 0
+        };
+
+        await _balanceRepo.AddAsync(balance);
+        await _balanceRepo.SaveChangesAsync();
+        return balance;
+    }
+
+    //  Apply for leave
     public async Task<(bool Success, string Message, int? Id)> ApplyLeaveAsync(
         int userId, CreateLeaveRequest request)
     {
@@ -39,33 +111,26 @@ public class LeaveService : ILeaveService
         if (hasOverlap)
             return (false, "You already have a leave request for these dates", null);
 
-        // 3. Calculate working days (exclude weekends)
+        // 3. Calculate working days
         var workingDays = CalculateWorkingDays(request.StartDate, request.EndDate);
-
         if (workingDays == 0)
             return (false, "Selected dates fall on weekends only", null);
 
-        // 4. Check leave balance
+        // 4. Check balance
         var year = request.StartDate.Year;
-        var balance = await _balanceRepo.GetByUserAndYearAsync(userId, year);
-        if (balance == null)
-        {
-            balance = new LeaveBalance { UserId = userId, Year = year };
-            await _balanceRepo.AddAsync(balance);
-            await _balanceRepo.SaveChangesAsync();
-        }
+        var balance = await GetOrCreateBalanceAsync(userId, year, request.JoinDate);
 
         if (request.LeaveType == LeaveType.Annual)
         {
-            var remaining = balance.AnnualTotal - balance.AnnualUsed;
-            if (workingDays > remaining)
-                return (false, $"Insufficient annual leave balance. Remaining: {remaining} days", null);
+            var totalAvailable = balance.AnnualTotal + balance.CarryForward - balance.AnnualUsed;
+            if (workingDays > totalAvailable)
+                return (false, $"Insufficient annual leave. Available: {totalAvailable} days", null);
         }
         else if (request.LeaveType == LeaveType.Medical)
         {
             var remaining = balance.MedicalTotal - balance.MedicalUsed;
             if (workingDays > remaining)
-                return (false, $"Insufficient medical leave balance. Remaining: {remaining} days", null);
+                return (false, $"Insufficient medical leave. Remaining: {remaining} days", null);
         }
 
         // 5. Create leave request
@@ -83,27 +148,71 @@ public class LeaveService : ILeaveService
 
         await _leaveRepo.AddAsync(leave);
         await _leaveRepo.SaveChangesAsync();
-        return (true, "Leave request submitted successfully", leave.Id);
+        return (true, $"Leave request submitted. Working days: {workingDays}", leave.Id);
     }
 
-    public async Task<IEnumerable<LeaveRequestResponse>> GetMyLeavesAsync(int userId)
+    //  Get balance with full breakdown 
+    public async Task<LeaveBalanceResponse> GetBalanceAsync(int userId, DateTime joinDate)
     {
-        var leaves = await _leaveRepo.GetByUserIdAsync(userId);
-        return leaves.Select(MapToResponse);
+        var year = DateTime.UtcNow.Year;
+        var balance = await GetOrCreateBalanceAsync(userId, year, joinDate);
+        var serviceYears = (DateTime.Today - joinDate).Days / 365;
+
+        return new LeaveBalanceResponse
+        {
+            Year = year,
+            AnnualEntitlement = balance.AnnualTotal,
+            CarryForward = balance.CarryForward,
+            TotalAnnualAvailable = balance.AnnualTotal + balance.CarryForward,
+            AnnualUsed = balance.AnnualUsed,
+            AnnualRemaining = balance.AnnualTotal + balance.CarryForward - balance.AnnualUsed,
+            MedicalTotal = balance.MedicalTotal,
+            MedicalUsed = balance.MedicalUsed,
+            MedicalRemaining = balance.MedicalTotal - balance.MedicalUsed,
+            ServiceYears = serviceYears
+        };
     }
 
-    public async Task<IEnumerable<LeaveRequestResponse>> GetPendingLeavesAsync()
+    //  Year end carry forward processor 
+    public async Task ProcessYearEndCarryForwardAsync(int userId, DateTime joinDate)
     {
-        var leaves = await _leaveRepo.GetPendingAsync();
-        return leaves.Select(MapToResponse);
+        var currentYear = DateTime.UtcNow.Year;
+        var nextYear = currentYear + 1;
+
+        // Check if next year balance already exists
+        var nextYearBalance = await _balanceRepo.GetByUserAndYearAsync(userId, nextYear);
+        if (nextYearBalance != null) return;
+
+        // Get current year balance
+        var currentBalance = await _balanceRepo.GetByUserAndYearAsync(userId, currentYear);
+        if (currentBalance == null) return;
+
+        // Calculate remaining days to carry forward
+        var remaining = currentBalance.AnnualTotal
+            + currentBalance.CarryForward
+            - currentBalance.AnnualUsed;
+        var carryForward = Math.Max(0, remaining);
+
+        // Calculate next year entitlement
+        var nextYearEntitlement = CalculateAnnualEntitlement(joinDate, nextYear);
+
+        // Create next year balance
+        var newBalance = new LeaveBalance
+        {
+            UserId = userId,
+            Year = nextYear,
+            AnnualTotal = nextYearEntitlement,
+            AnnualUsed = 0,
+            CarryForward = carryForward,
+            MedicalTotal = 14,
+            MedicalUsed = 0
+        };
+
+        await _balanceRepo.AddAsync(newBalance);
+        await _balanceRepo.SaveChangesAsync();
     }
 
-    public async Task<IEnumerable<LeaveRequestResponse>> GetAllLeavesAsync()
-    {
-        var leaves = await _leaveRepo.GetAllOrderedAsync();
-        return leaves.Select(MapToResponse);
-    }
-
+    //  Review leave
     public async Task<(bool Success, string Message)> ReviewLeaveAsync(
         int leaveId, int reviewerId, ReviewLeaveRequest request)
     {
@@ -117,7 +226,6 @@ public class LeaveService : ILeaveService
         leave.ReviewComment = request.Comment;
         leave.ReviewedAt = DateTime.UtcNow;
 
-        // Deduct balance only when approved
         if (request.IsApproved)
         {
             var balance = await _balanceRepo.GetByUserAndYearAsync(
@@ -138,46 +246,22 @@ public class LeaveService : ILeaveService
         return (true, $"Leave {(request.IsApproved ? "approved" : "rejected")} successfully");
     }
 
-    public async Task<object> GetBalanceAsync(int userId)
+    public async Task<IEnumerable<LeaveRequestResponse>> GetMyLeavesAsync(int userId)
     {
-        var year = DateTime.UtcNow.Year;
-        var balance = await _balanceRepo.GetByUserAndYearAsync(userId, year);
-
-        if (balance == null)
-        {
-            balance = new LeaveBalance { UserId = userId, Year = year };
-            await _balanceRepo.AddAsync(balance);
-            await _balanceRepo.SaveChangesAsync();
-        }
-
-        return new
-        {
-            balance.AnnualTotal,
-            balance.AnnualUsed,
-            AnnualRemaining = balance.AnnualTotal - balance.AnnualUsed,
-            balance.MedicalTotal,
-            balance.MedicalUsed,
-            MedicalRemaining = balance.MedicalTotal - balance.MedicalUsed
-        };
+        var leaves = await _leaveRepo.GetByUserIdAsync(userId);
+        return leaves.Select(MapToResponse);
     }
 
-    // Calculate working days excluding weekends
-    public int CalculateWorkingDays(DateTime startDate, DateTime endDate)
+    public async Task<IEnumerable<LeaveRequestResponse>> GetPendingLeavesAsync()
     {
-        int workingDays = 0;
-        var current = startDate;
+        var leaves = await _leaveRepo.GetPendingAsync();
+        return leaves.Select(MapToResponse);
+    }
 
-        while (current <= endDate)
-        {
-            if (current.DayOfWeek != DayOfWeek.Saturday &&
-                current.DayOfWeek != DayOfWeek.Sunday)
-            {
-                workingDays++;
-            }
-            current = current.AddDays(1);
-        }
-
-        return workingDays;
+    public async Task<IEnumerable<LeaveRequestResponse>> GetAllLeavesAsync()
+    {
+        var leaves = await _leaveRepo.GetAllOrderedAsync();
+        return leaves.Select(MapToResponse);
     }
 
     private static LeaveRequestResponse MapToResponse(LeaveRequest l) => new()

@@ -36,8 +36,15 @@ public class LeaveBalance
     public int Id { get; set; }
     public int UserId { get; set; }
     public int Year { get; set; }
+
+    // Entitlement for this year based on service years
     public int AnnualTotal { get; set; } = 14;
     public int AnnualUsed { get; set; } = 0;
+
+    // Days carried forward from previous year
+    public int CarryForward { get; set; } = 0;
+
+    // Medical leave (no carry forward)
     public int MedicalTotal { get; set; } = 14;
     public int MedicalUsed { get; set; } = 0;
 }

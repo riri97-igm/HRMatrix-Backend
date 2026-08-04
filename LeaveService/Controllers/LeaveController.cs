@@ -2,6 +2,7 @@
 using LeaveService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -37,10 +38,10 @@ public class LeaveController : ControllerBase
     }
 
     [HttpGet("balance")]
-    public async Task<IActionResult> GetBalance()
+    public async Task<IActionResult> GetBalance([FromQuery] DateTime joinDate)
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var balance = await _leaveService.GetBalanceAsync(userId);
+        var balance = await _leaveService.GetBalanceAsync(userId, joinDate);
         return Ok(balance);
     }
 
