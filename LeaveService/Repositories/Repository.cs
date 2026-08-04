@@ -1,7 +1,9 @@
-﻿using EmployeeService.Data;
+﻿using LeaveService.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace EmployeeService.Repositories;
+namespace LeaveService.Repositories;
 
 public class Repository<T> : IRepository<T> where T : class
 {
@@ -11,7 +13,7 @@ public class Repository<T> : IRepository<T> where T : class
     public Repository(AppDbContext db)
     {
         _db = db;
-        _dbSet = _db.Set<T>();
+        _dbSet = db.Set<T>();
     }
 
     public virtual async Task<T?> GetByIdAsync(int id) =>

@@ -1,6 +1,6 @@
 ﻿using EmployeeService.Data;
 using EmployeeService.Models;
-using EmployeeService.Repostories;
+using EmployeeService.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace EmployeeService.Repositories;

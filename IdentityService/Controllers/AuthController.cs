@@ -1,13 +1,12 @@
 using IdentityService.Data;
 using IdentityService.DTOs;
+using IdentityService.Models;
 using IdentityService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.CodeDom.Compiler;
 
-namespace IdentityService.Controllers
-
+namespace IdentityService.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -16,25 +15,23 @@ public class AuthController : ControllerBase
     private readonly AppDbContext _db;
     private readonly IJwtService _jwtService;
 
-    public AuthController(AppDbContext db, IJwtService _jwtService)
+    public AuthController(AppDbContext db, IJwtService jwtService)
     {
         _db = db;
-        _jwtService = JwtService;
+        _jwtService = jwtService;
     }
+
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        //Find activer user by email
         var user = await _db.Users
             .FirstOrDefaultAsync(u => u.Email == request.Email && u.IsActive);
 
-        //Verify password hash
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
-
             return Unauthorized(new { message = "Invalid email or password" });
 
-        // Generate JWT token 
         var token = _jwtService.GenerateToken(user);
+
         return Ok(new AuthResponse
         {
             Token = token,
@@ -50,7 +47,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
         if (await _db.Users.AnyAsync(u => u.Email == request.Email))
-            return BadRequest(new { message = "Email already exist" });
+            return BadRequest(new { message = "Email already exists" });
 
         var user = new User
         {
@@ -65,27 +62,33 @@ public class AuthController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(new { message = "User created successfully", userId = user.Id });
-
     }
 
     [HttpGet("users")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResuly> GetUsers()
+    public async Task<IActionResult> GetUsers()
     {
         var users = await _db.Users
-            .Select(uint => new
-            {
-                u.Id, u.FullName, u.Email, u.Role, u.IsActive, u.DepartmentId
-            }).ToListAsync();  
+            .Select(u => new {
+                u.Id,
+                u.FullName,
+                u.Email,
+                u.Role,
+                u.IsActive,
+                u.DepartmentId
+            })
+            .ToListAsync();
+
+        return Ok(users);
     }
 
     [HttpPut("users/{id}/deactivate")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Deactivate (int id)
+    public async Task<IActionResult> Deactivate(int id)
     {
         var user = await _db.Users.FindAsync(id);
         if (user == null) return NotFound();
-        user.IsActive = falser;
+        user.IsActive = false;
         await _db.SaveChangesAsync();
         return Ok(new { message = "User deactivated" });
     }

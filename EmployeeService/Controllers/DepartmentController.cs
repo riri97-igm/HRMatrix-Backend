@@ -1,4 +1,5 @@
-﻿using EmployeeService.Models;
+﻿using EmployeeService.DTOs;
+using EmployeeService.Models;
 using EmployeeService.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,13 +9,13 @@ namespace EmployeeService.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class DepartmentController : ControllerBase
+public class DepartmentsController : ControllerBase
 {
     private readonly IDepartmentRepository _deptRepo;
 
     public DepartmentsController(IDepartmentRepository deptRepo)
     {
-        _deptRepo = deptRepo;ျ
+        _deptRepo = deptRepo;
     }
 
     [HttpGet]

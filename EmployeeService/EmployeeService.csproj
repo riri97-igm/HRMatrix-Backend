@@ -5,20 +5,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Repositories\**" />
-    <Compile Remove="Services\**" />
-    <Content Remove="Repositories\**" />
-    <Content Remove="Services\**" />
-    <EmbeddedResource Remove="Repositories\**" />
-    <EmbeddedResource Remove="Services\**" />
-    <None Remove="Repositories\**" />
-    <None Remove="Services\**" />
-  </ItemGroup>
-
+	
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.29" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.29" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.10">
       <PrivateAssets>all</PrivateAssets>
