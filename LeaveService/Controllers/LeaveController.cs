@@ -23,8 +23,8 @@ public class LeaveController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Apply([FromBody] CreateLeaveRequest request)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var (success, message, id) = await _leaveService.ApplyLeaveAsync(userId, request);
+        var employeeId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var (success, message, id) = await _leaveService.ApplyLeaveAsync(employeeId, request);
         if (!success) return BadRequest(new { message });
         return Ok(new { message, id });
     }
@@ -32,16 +32,16 @@ public class LeaveController : ControllerBase
     [HttpGet("my")]
     public async Task<IActionResult> GetMyLeaves()
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var leaves = await _leaveService.GetMyLeavesAsync(userId);
+        var employeeId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var leaves = await _leaveService.GetMyLeavesAsync(employeeId);
         return Ok(leaves);
     }
 
     [HttpGet("balance")]
     public async Task<IActionResult> GetBalance([FromQuery] DateTime joinDate)
     {
-        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var balance = await _leaveService.GetBalanceAsync(userId, joinDate);
+        var employeeId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var balance = await _leaveService.GetBalanceAsync(employeeId, joinDate);
         return Ok(balance);
     }
 

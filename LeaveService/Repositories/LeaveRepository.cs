@@ -11,9 +11,9 @@ public class LeaveRepository : Repository<LeaveRequest>, ILeaveRepository
 {
     public LeaveRepository(AppDbContext db) : base(db) { }
 
-    public async Task<IEnumerable<LeaveRequest>> GetByUserIdAsync(int userId) =>
+    public async Task<IEnumerable<LeaveRequest>> GetByEmployeeIdAsync(int employeeId) =>
         await _db.LeaveRequests
-            .Where(l => l.UserId == userId)
+            .Where(l => l.EmployeeId == employeeId)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync();
 

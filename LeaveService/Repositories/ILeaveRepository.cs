@@ -6,12 +6,12 @@ namespace LeaveService.Repositories;
 
 public interface ILeaveRepository : IRepository<LeaveRequest>
 {
-    Task<IEnumerable<LeaveRequest>> GetByUserIdAsync(int userId);
+    Task<IEnumerable<LeaveRequest>> GetByEmployeeIdAsync(int employeeId);
     Task<IEnumerable<LeaveRequest>> GetPendingAsync();
     Task<IEnumerable<LeaveRequest>> GetAllOrderedAsync();
 }
 
 public interface ILeaveBalanceRepository : IRepository<LeaveBalance>
 {
-    Task<LeaveBalance?> GetByUserAndYearAsync(int userId, int year);
+    Task<LeaveBalance?> GetByEmployeeAndYearAsync(int employeeId, int year);
 }

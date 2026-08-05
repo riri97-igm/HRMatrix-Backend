@@ -55,9 +55,9 @@ public class LeaveService : ILeaveService
 
     // Get or create balance for a year 
     private async Task<LeaveBalance> GetOrCreateBalanceAsync(
-        int userId, int year, DateTime joinDate)
+        int employeeId, int year, DateTime joinDate)
     {
-        var balance = await _balanceRepo.GetByUserAndYearAsync(userId, year);
+        var balance = await _balanceRepo.GetByEmployeeAndYearAsync(employeeId, year);
         if (balance != null) return balance;
 
         // Auto create with carry forward from previous year
@@ -65,7 +65,7 @@ public class LeaveService : ILeaveService
         var carryForward = 0;
 
         // Get previous year balance and calculate carry forward
-        var prevBalance = await _balanceRepo.GetByUserAndYearAsync(userId, year - 1);
+        var prevBalance = await _balanceRepo.GetByEmployeeAndYearAsync(employeeId, year - 1);
         if (prevBalance != null)
         {
             var prevRemaining = prevBalance.AnnualTotal
@@ -76,7 +76,7 @@ public class LeaveService : ILeaveService
 
         balance = new LeaveBalance
         {
-            UserId = userId,
+            EmployeeId = employeeId,
             Year = year,
             AnnualTotal = entitlement,
             AnnualUsed = 0,
@@ -92,7 +92,7 @@ public class LeaveService : ILeaveService
 
     //  Apply for leave
     public async Task<(bool Success, string Message, int? Id)> ApplyLeaveAsync(
-        int userId, CreateLeaveRequest request)
+        int employeeId, CreateLeaveRequest request)
     {
         // 1. Validate dates
         if (request.StartDate < DateTime.Today)
@@ -102,7 +102,7 @@ public class LeaveService : ILeaveService
             return (false, "End date cannot be before start date", null);
 
         // 2. Check overlapping leave
-        var existingLeaves = await _leaveRepo.GetByUserIdAsync(userId);
+        var existingLeaves = await _leaveRepo.GetByEmployeeIdAsync(employeeId);
         var hasOverlap = existingLeaves.Any(l =>
             l.Status != LeaveStatus.Rejected &&
             l.StartDate <= request.EndDate &&
@@ -118,7 +118,7 @@ public class LeaveService : ILeaveService
 
         // 4. Check balance
         var year = request.StartDate.Year;
-        var balance = await GetOrCreateBalanceAsync(userId, year, request.JoinDate);
+        var balance = await GetOrCreateBalanceAsync(employeeId, year, request.JoinDate);
 
         if (request.LeaveType == LeaveType.Annual)
         {
@@ -136,7 +136,7 @@ public class LeaveService : ILeaveService
         // 5. Create leave request
         var leave = new LeaveRequest
         {
-            UserId = userId,
+            EmployeeId = employeeId,
             EmployeeName = request.EmployeeName,
             LeaveType = request.LeaveType,
             StartDate = request.StartDate,
@@ -152,10 +152,10 @@ public class LeaveService : ILeaveService
     }
 
     //  Get balance with full breakdown 
-    public async Task<LeaveBalanceResponse> GetBalanceAsync(int userId, DateTime joinDate)
+    public async Task<LeaveBalanceResponse> GetBalanceAsync(int employeeId, DateTime joinDate)
     {
         var year = DateTime.UtcNow.Year;
-        var balance = await GetOrCreateBalanceAsync(userId, year, joinDate);
+        var balance = await GetOrCreateBalanceAsync(employeeId, year, joinDate);
         var serviceYears = (DateTime.Today - joinDate).Days / 365;
 
         return new LeaveBalanceResponse
@@ -174,17 +174,17 @@ public class LeaveService : ILeaveService
     }
 
     //  Year end carry forward processor 
-    public async Task ProcessYearEndCarryForwardAsync(int userId, DateTime joinDate)
+    public async Task ProcessYearEndCarryForwardAsync(int employeeId, DateTime joinDate)
     {
         var currentYear = DateTime.UtcNow.Year;
         var nextYear = currentYear + 1;
 
         // Check if next year balance already exists
-        var nextYearBalance = await _balanceRepo.GetByUserAndYearAsync(userId, nextYear);
+        var nextYearBalance = await _balanceRepo.GetByEmployeeAndYearAsync(employeeId, nextYear);
         if (nextYearBalance != null) return;
 
         // Get current year balance
-        var currentBalance = await _balanceRepo.GetByUserAndYearAsync(userId, currentYear);
+        var currentBalance = await _balanceRepo.GetByEmployeeAndYearAsync(employeeId, currentYear);
         if (currentBalance == null) return;
 
         // Calculate remaining days to carry forward
@@ -199,7 +199,7 @@ public class LeaveService : ILeaveService
         // Create next year balance
         var newBalance = new LeaveBalance
         {
-            UserId = userId,
+            EmployeeId = employeeId,
             Year = nextYear,
             AnnualTotal = nextYearEntitlement,
             AnnualUsed = 0,
@@ -222,14 +222,14 @@ public class LeaveService : ILeaveService
             return (false, "Leave request already reviewed");
 
         leave.Status = request.IsApproved ? LeaveStatus.Approved : LeaveStatus.Rejected;
-        leave.ReviewedByUserId = reviewerId;
+        leave.ReviewedByEmployeeId = reviewerId;
         leave.ReviewComment = request.Comment;
         leave.ReviewedAt = DateTime.UtcNow;
 
         if (request.IsApproved)
         {
-            var balance = await _balanceRepo.GetByUserAndYearAsync(
-                leave.UserId, leave.StartDate.Year);
+            var balance = await _balanceRepo.GetByEmployeeAndYearAsync(
+                leave.EmployeeId, leave.StartDate.Year);
 
             if (balance != null)
             {
@@ -246,9 +246,9 @@ public class LeaveService : ILeaveService
         return (true, $"Leave {(request.IsApproved ? "approved" : "rejected")} successfully");
     }
 
-    public async Task<IEnumerable<LeaveRequestResponse>> GetMyLeavesAsync(int userId)
+    public async Task<IEnumerable<LeaveRequestResponse>> GetMyLeavesAsync(int employeeId)
     {
-        var leaves = await _leaveRepo.GetByUserIdAsync(userId);
+        var leaves = await _leaveRepo.GetByEmployeeIdAsync(employeeId);
         return leaves.Select(MapToResponse);
     }
 
@@ -267,7 +267,7 @@ public class LeaveService : ILeaveService
     private static LeaveRequestResponse MapToResponse(LeaveRequest l) => new()
     {
         Id = l.Id,
-        UserId = l.UserId,
+        EmployeeId = l.EmployeeId,
         EmployeeName = l.EmployeeName,
         LeaveType = l.LeaveType.ToString(),
         StartDate = l.StartDate,

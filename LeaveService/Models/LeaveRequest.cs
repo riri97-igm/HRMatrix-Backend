@@ -17,7 +17,7 @@ public enum LeaveType
 public class LeaveRequest
 {
     public int Id { get; set; }
-    public int UserId { get; set; }
+    public int EmployeeId { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
     public LeaveType LeaveType { get; set; }
     public DateTime StartDate { get; set; }
@@ -25,7 +25,7 @@ public class LeaveRequest
     public int TotalDays { get; set; }
     public string Reason { get; set; } = string.Empty;
     public LeaveStatus Status { get; set; } = LeaveStatus.Pending;
-    public int? ReviewedByUserId { get; set; }
+    public int? ReviewedByEmployeeId { get; set; }
     public string? ReviewComment { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ReviewedAt { get; set; }
@@ -34,7 +34,7 @@ public class LeaveRequest
 public class LeaveBalance
 {
     public int Id { get; set; }
-    public int UserId { get; set; }
+    public int EmployeeId { get; set; }
     public int Year { get; set; }
 
     // Entitlement for this year based on service years

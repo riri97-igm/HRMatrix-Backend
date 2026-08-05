@@ -9,7 +9,7 @@ public class LeaveBalanceRepository : Repository<LeaveBalance>, ILeaveBalanceRep
 {
     public LeaveBalanceRepository(AppDbContext db) : base(db) { }
 
-    public async Task<LeaveBalance?> GetByUserAndYearAsync(int userId, int year) =>
+    public async Task<LeaveBalance?> GetByEmployeeAndYearAsync(int employeeId, int year) =>
         await _db.LeaveBalances
-            .FirstOrDefaultAsync(b => b.UserId == userId && b.Year == year);
+            .FirstOrDefaultAsync(b => b.EmployeeId == employeeId && b.Year == year);
 }
