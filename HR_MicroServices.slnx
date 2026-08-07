@@ -1,5 +1,4 @@
 <Solution>
-  <Project Path="ApiGateway/ApiGateway.csproj" />
   <Project Path="EmployeeService/EmployeeService.csproj" />
   <Project Path="IdentityService/IdentityService.csproj" />
   <Project Path="LeaveService/LeaveService.csproj" />
