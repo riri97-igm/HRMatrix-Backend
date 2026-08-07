@@ -89,3 +89,73 @@ public class LoanResponse
     public DateTime? SettledDate { get; set; }
     public string Notes { get; set; } = string.Empty;
 }
+
+public class CountryPolicyResponse
+{
+    public int Id { get; set; }
+    public string CountryCode { get; set; } = string.Empty;
+    public string CountryName { get; set; } = string.Empty;
+    public string Currency { get; set; } = string.Empty;
+    public string FlagEmoji { get; set; } = string.Empty;
+    public string SocialContributionLabel { get; set; } = string.Empty;
+    public decimal SocialContributionEmployeeRate { get; set; }
+    public decimal SocialContributionEmployerRate { get; set; }
+    public bool HasProgressiveTax { get; set; }
+    public bool HasAgeBased { get; set; }
+    public bool IsActive { get; set; }
+    public List<TaxBracketResponse> TaxBrackets { get; set; } = new();
+    public List<AgeBracketResponse> AgeBrackets { get; set; } = new();
+}
+
+public class TaxBracketResponse
+{
+    public int Id { get; set; }
+    public string Country { get; set; } = string.Empty;
+    public decimal MinIncome { get; set; }
+    public decimal MaxIncome { get; set; }
+    public decimal TaxRate { get; set; }
+    public string Description { get; set; } = string.Empty;
+}
+
+public class AgeBracketResponse
+{
+    public int Id { get; set; }
+    public string CountryCode { get; set; } = string.Empty;
+    public int MinAge { get; set; }
+    public int MaxAge { get; set; }
+    public decimal EmployeeRate { get; set; }
+    public decimal EmployerRate { get; set; }
+    public string Description { get; set; } = string.Empty;
+}
+
+public class CreateCountryPolicyRequest
+{
+    public string CountryCode { get; set; } = string.Empty;
+    public string CountryName { get; set; } = string.Empty;
+    public string Currency { get; set; } = string.Empty;
+    public string FlagEmoji { get; set; } = string.Empty;
+    public string SocialContributionLabel { get; set; } = string.Empty;
+    public decimal SocialContributionEmployeeRate { get; set; }
+    public decimal SocialContributionEmployerRate { get; set; }
+    public bool HasProgressiveTax { get; set; }
+    public bool HasAgeBased { get; set; }
+}
+
+public class CreateTaxBracketRequest
+{
+    public string CountryCode { get; set; } = string.Empty;
+    public decimal MinIncome { get; set; }
+    public decimal MaxIncome { get; set; }
+    public decimal TaxRate { get; set; }
+    public string Description { get; set; } = string.Empty;
+}
+
+public class CreateAgeBracketRequest
+{
+    public string CountryCode { get; set; } = string.Empty;
+    public int MinAge { get; set; }
+    public int MaxAge { get; set; }
+    public decimal EmployeeRate { get; set; }
+    public decimal EmployerRate { get; set; }
+    public string Description { get; set; } = string.Empty;
+}

@@ -9,18 +9,21 @@ public class PayrollService : IPayrollService
     private readonly IPayrollRepository _payrollRepo;
     private readonly ILoanRepository _loanRepo;
     private readonly ITaxService _taxService;
+    private readonly ICountryPolicyRepository _countryRepo;
 
     public PayrollService(
         IPayrollRepository payrollRepo,
         ILoanRepository loanRepo,
-        ITaxService taxService)
+        ITaxService taxService,
+        ICountryPolicyRepository countryRepo)
     {
         _payrollRepo = payrollRepo;
         _loanRepo = loanRepo;
         _taxService = taxService;
+        _countryRepo = countryRepo;
     }
 
-    //  Generate Payslip 
+    // Generate Payslip
     public async Task<(bool Success, string Message, int? Id)> GeneratePayslipAsync(
         int generatedByUserId, GeneratePayslipRequest request)
     {
@@ -29,6 +32,11 @@ public class PayrollService : IPayrollService
             request.EmployeeId, request.Month, request.Year))
             return (false, "Payslip already generated for this month", null);
 
+        // Check country policy exists
+        var policy = await _countryRepo.GetByCountryCodeAsync(request.CountryCode);
+        if (policy == null)
+            return (false, $"Country policy not found for {request.CountryCode}", null);
+
         // 1. Calculate gross salary
         var grossSalary = request.BasicSalary
             + request.Allowance
@@ -36,54 +44,58 @@ public class PayrollService : IPayrollService
             + request.YearEndBonus
             + request.ThirteenthMonth;
 
-        // 2. Auto fetch active loans and calculate total loan deduction
+        // 2. Auto fetch active loans
         var activeLoans = await _loanRepo.GetActiveLoansAsync(request.EmployeeId);
         decimal loanDeduction = 0;
 
         foreach (var loan in activeLoans)
         {
-            // Deduct monthly amount or remaining balance whichever is less
             var deductAmount = Math.Min(loan.MonthlyDeduction, loan.RemainingBalance);
             loanDeduction += deductAmount;
-
-            // Update loan remaining balance
             loan.RemainingBalance -= deductAmount;
 
-            // Check if loan is fully settled
             if (loan.RemainingBalance <= 0)
             {
                 loan.RemainingBalance = 0;
                 loan.IsSettled = true;
                 loan.SettledDate = DateTime.UtcNow;
             }
-
             _loanRepo.Update(loan);
         }
 
-        // 3. Calculate tax/CPF based on country
+        // 3. Calculate tax/contributions dynamically
         decimal taxDeduction = 0;
         decimal socialSecurity = 0;
         decimal cpfEmployee = 0;
         decimal cpfEmployer = 0;
 
-        if (request.Country == "Myanmar")
+        if (policy.HasProgressiveTax)
         {
-            // Annual gross for tax calculation
             var annualGross = grossSalary * 12;
-            taxDeduction = _taxService.CalculateMyanmarTax(annualGross);
-            socialSecurity = _taxService.CalculateSocialSecurity(request.BasicSalary);
+            taxDeduction = await _taxService.CalculateTaxAsync(
+                request.CountryCode, annualGross);
         }
-        else if (request.Country == "Singapore")
+
+        if (policy.HasAgeBased)
         {
-            var age = request.EmployeeAge ?? 30; // default 30 if not provided
-            cpfEmployee = _taxService.CalculateCpfEmployee(grossSalary, age);
-            cpfEmployer = _taxService.CalculateCpfEmployer(grossSalary, age);
+            var age = request.EmployeeAge ?? 30;
+            var (empContrib, erContrib) = await _taxService
+                .CalculateAgeBasedContributionAsync(request.CountryCode, grossSalary, age);
+            cpfEmployee = empContrib;
+            cpfEmployer = erContrib;
+        }
+        else
+        {
+            socialSecurity = await _taxService.CalculateSocialContributionAsync(
+                request.CountryCode, request.BasicSalary);
         }
 
         // 4. Calculate total deduction
-        var totalDeduction = request.Country == "Myanmar"
-            ? taxDeduction + socialSecurity + loanDeduction + request.OtherDeduction
-            : cpfEmployee + loanDeduction + request.OtherDeduction;
+        var totalDeduction = taxDeduction
+            + socialSecurity
+            + cpfEmployee
+            + loanDeduction
+            + request.OtherDeduction;
 
         // 5. Calculate net salary
         var netSalary = grossSalary - totalDeduction;
@@ -95,35 +107,27 @@ public class PayrollService : IPayrollService
             EmployeeName = request.EmployeeName,
             Month = request.Month,
             Year = request.Year,
-            Country = request.Country,
-
-            // Earnings
+            Country = policy.CountryName,
             BasicSalary = request.BasicSalary,
             Allowance = request.Allowance,
             OvertimePay = request.OvertimePay,
             YearEndBonus = request.YearEndBonus,
             ThirteenthMonth = request.ThirteenthMonth,
             GrossSalary = grossSalary,
-
-            // Deductions
             TaxDeduction = taxDeduction,
             SocialSecurity = socialSecurity,
             Cpfemployee = cpfEmployee,
             Cpfemployer = cpfEmployer,
             LoanDeduction = loanDeduction,
             OtherDeduction = request.OtherDeduction,
-
-            // Summary
             TotalDeduction = totalDeduction,
             NetSalary = netSalary,
-
             Notes = request.Notes,
             GeneratedByUserId = generatedByUserId
         };
 
         await _payrollRepo.AddAsync(payslip);
         await _payrollRepo.SaveChangesAsync();
-
         return (true, "Payslip generated successfully", payslip.Id);
     }
 
@@ -134,6 +138,16 @@ public class PayrollService : IPayrollService
         return payslips.Select(MapToResponse);
     }
 
+    // Get Last 3 Months 
+    public async Task<IEnumerable<PayslipResponse>> GetMyRecentPayslipsAsync(int employeeId)
+    {
+        var allPayslips = await _payrollRepo.GetByEmployeeIdAsync(employeeId);
+        var threeMonthsAgo = DateTime.UtcNow.AddMonths(-3);
+        return allPayslips
+            .Where(p => new DateTime(p.Year, p.Month, 1) >= threeMonthsAgo)
+            .Select(MapToResponse);
+    }
+
     // Get All Payslips 
     public async Task<IEnumerable<PayslipResponse>> GetAllPayslipsAsync(int? year, int? month)
     {
@@ -141,31 +155,14 @@ public class PayrollService : IPayrollService
         return payslips.Select(MapToResponse);
     }
 
-    // Get Payslip By Id 
+    // Get Payslip By Id
     public async Task<PayslipResponse?> GetPayslipByIdAsync(
         int id, int employeeId, string role)
     {
         var payslip = await _payrollRepo.GetByIdAsync(id);
         if (payslip == null) return null;
-
-        // Employee can only see own payslip
-        if (role == "Employee" && payslip.EmployeeId != employeeId)
-            return null;
-
+        if (role == "Employee" && payslip.EmployeeId != employeeId) return null;
         return MapToResponse(payslip);
-    }
-
-    // Get Last 3 Months Payslips 
-    public async Task<IEnumerable<PayslipResponse>> GetMyRecentPayslipsAsync(int employeeId)
-    {
-        var allPayslips = await _payrollRepo.GetByEmployeeIdAsync(employeeId);
-
-        // Get last 3 months based on current date
-        var threeMonthsAgo = DateTime.UtcNow.AddMonths(-3);
-
-        return allPayslips
-            .Where(p => new DateTime(p.Year, p.Month, 1) >= threeMonthsAgo)
-            .Select(MapToResponse);
     }
 
     // Create Loan 
@@ -174,10 +171,8 @@ public class PayrollService : IPayrollService
     {
         if (request.TotalLoanAmount <= 0)
             return (false, "Loan amount must be greater than 0", null);
-
         if (request.MonthlyDeduction <= 0)
             return (false, "Monthly deduction must be greater than 0", null);
-
         if (request.MonthlyDeduction > request.TotalLoanAmount)
             return (false, "Monthly deduction cannot exceed total loan amount", null);
 
@@ -198,21 +193,21 @@ public class PayrollService : IPayrollService
         return (true, "Loan registered successfully", loan.Id);
     }
 
-    // Get Loans By Employee 
+    // Get Loans By Employee
     public async Task<IEnumerable<LoanResponse>> GetLoansByEmployeeIdAsync(int employeeId)
     {
         var loans = await _loanRepo.GetByEmployeeIdAsync(employeeId);
         return loans.Select(MapLoanToResponse);
     }
 
-    //  Get All Loans 
+    // Get All Loans 
     public async Task<IEnumerable<LoanResponse>> GetAllLoansAsync()
     {
         var loans = await _loanRepo.GetAllLoansAsync();
         return loans.Select(MapLoanToResponse);
     }
 
-    // Settle Loan Manually 
+    // Settle Loan 
     public async Task<(bool Success, string Message)> SettleLoanAsync(int loanId)
     {
         var loan = await _loanRepo.GetByIdAsync(loanId);

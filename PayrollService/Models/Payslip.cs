@@ -61,3 +61,30 @@ public class TaxBracket
     public decimal TaxRate { get; set; }
     public string Description {  get; set; } = string.Empty;
 }
+
+public class CountryPolicy
+{
+    public int Id { get; set; }
+    public string CountryCode { get; set; } = string.Empty;
+    public string CountryName { get; set; } = string.Empty;
+    public string Currency { get; set; } = string.Empty;
+    public string FlagEmoji { get; set; } = string.Empty;
+    public string SocialContributionLabel { get; set; } = string.Empty;
+    public decimal SocialContributionEmployeeRate { get; set; }
+    public decimal SocialContributionEmployerRate { get; set; }
+    public bool HasProgressiveTax { get; set; }
+    public bool HasAgeBased { get; set; }
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class AgeBracket
+{
+    public int Id { get; set; }
+    public string CountryCode { get; set; } = string.Empty;
+    public int MinAge { get; set; }
+    public int MaxAge { get; set; }
+    public decimal EmployeeRate { get; set; }
+    public decimal EmployerRate { get; set; }
+    public string Description { get; set; } = string.Empty;
+}
