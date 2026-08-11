@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using PayrollService.Properties.Data;
+using PayrollService.Data;
 using PayrollService.Repositories;
 using PayrollService.Services;
 using System.Text;
@@ -20,6 +20,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Register Repositories
 builder.Services.AddScoped<IPayrollRepository, PayrollRepository>();
 builder.Services.AddScoped<ILoanRepository, LoanRepository>();
+builder.Services.AddScoped<ICountryPolicyRepository, CountryPolicyRepository>();
 
 // Register Services
 builder.Services.AddScoped<ITaxService, TaxService>();
@@ -53,6 +54,10 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod());
 });
 
+builder.Services.AddHttpClient("LeaveService", client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5003");
+});
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())

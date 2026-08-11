@@ -7,6 +7,7 @@ public class GeneratePayslipRequest
     public int Month { get; set; }
     public int Year { get; set; }
     public string Country { get; set; } = "Myanmar"; //can change contry 
+    public string CountryCode { get; set; } = "MM";
 
     //  Admin enters these
     public decimal BasicSalary { get; set; }
@@ -64,6 +65,8 @@ public class PayslipResponse
 
     public string Notes { get; set; } = string.Empty;
     public DateTime GeneratedAt { get; set; }
+    public decimal UnpaidLeaveDeduction { get; set; }
+    public int UnpaidLeaveDays { get; set; }
 }
 
 public class CreateLoanRequest

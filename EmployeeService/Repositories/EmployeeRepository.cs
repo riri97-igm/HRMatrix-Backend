@@ -28,7 +28,6 @@ public class EmployeeRepository : Repository<Employee>, IEmployeeRepository
     public async Task<IEnumerable<Employee>> GetAllWithDepartmentAsync() =>
         await _db.Employees
             .Include(e => e.Department)
-            .Where(e => e.IsActive)
             .ToListAsync();
 
     public async Task<Employee?> GetByIdWithDepartmentAsync(int id) =>

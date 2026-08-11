@@ -10,17 +10,20 @@ public class PayrollService : IPayrollService
     private readonly ILoanRepository _loanRepo;
     private readonly ITaxService _taxService;
     private readonly ICountryPolicyRepository _countryRepo;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public PayrollService(
         IPayrollRepository payrollRepo,
         ILoanRepository loanRepo,
         ITaxService taxService,
-        ICountryPolicyRepository countryRepo)
+        ICountryPolicyRepository countryRepo,
+        IHttpClientFactory httpClientFactory)
     {
         _payrollRepo = payrollRepo;
         _loanRepo = loanRepo;
         _taxService = taxService;
         _countryRepo = countryRepo;
+        _httpClientFactory = httpClientFactory;
     }
 
     // Generate Payslip
@@ -62,6 +65,30 @@ public class PayrollService : IPayrollService
             }
             _loanRepo.Update(loan);
         }
+        // 3. Auto calculate unpaid leave deduction
+        decimal unpaidLeaveDeduction = 0;
+        try
+        {
+            var client = _httpClientFactory.CreateClient("LeaveService");
+
+            // Get JWT token from current request to forward to LeaveService
+            var response = await client.GetAsync(
+                $"/api/leave/unpaid?employeeId={request.EmployeeId}&month={request.Month}&year={request.Year}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadFromJsonAsync<UnpaidLeaveResponse>();
+                if (content != null && content.TotalUnpaidDays > 0)
+                {
+                    // Calculate daily rate based on working days in month
+                    var daysInMonth = DateTime.DaysInMonth(request.Year, request.Month);
+                    var workingDays = GetWorkingDays(request.Year, request.Month);
+                    var dailyRate = request.BasicSalary / workingDays;
+                    unpaidLeaveDeduction = Math.Round(dailyRate * content.TotalUnpaidDays, 2);
+                }
+            }
+        }
+        catch { /* ignore if leave service unavailable */ }
 
         // 3. Calculate tax/contributions dynamically
         decimal taxDeduction = 0;
@@ -263,4 +290,23 @@ public class PayrollService : IPayrollService
         SettledDate = l.SettledDate,
         Notes = l.Notes
     };
+    public class UnpaidLeaveResponse
+    {
+        public int EmployeeId { get; set; }
+        public int Month { get; set; }
+        public int Year { get; set; }
+        public int TotalUnpaidDays { get; set; }
+    }
+    private int GetWorkingDays(int year, int month)
+    {
+        var days = 0;
+        var daysInMonth = DateTime.DaysInMonth(year, month);
+        for (int i = 1; i <= daysInMonth; i++)
+        {
+            var day = new DateTime(year, month, i).DayOfWeek;
+            if (day != DayOfWeek.Saturday && day != DayOfWeek.Sunday)
+                days++;
+        }
+        return days;
+    }
 }

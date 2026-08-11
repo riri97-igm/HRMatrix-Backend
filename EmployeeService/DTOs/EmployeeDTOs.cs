@@ -36,9 +36,18 @@ public class EmployeeResponse
     public decimal BaseSalary { get; set; }
     public DateTime JoinDate { get; set; }
     public bool IsActive { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public DateTime? ResignationDate { get; set; }
+    public string Remarks { get; set; } = string.Empty;
 }
 
 public class DepartmentRequest
 {
     public string Name { get; set; } = string.Empty;
+}
+public class DeactivateEmployeeRequest
+{
+    public string Status { get; set; } = string.Empty;
+    public DateTime? ResignationDate { get; set; }
+    public string Remarks { get; set; } = string.Empty;
 }

@@ -61,9 +61,15 @@ public class AuthController : ControllerBase
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
 
-        return Ok(new { message = "User created successfully", userId = user.Id });
+        return Ok(new
+        {
+            message = "User created successfully",
+            userId = user.Id,
+            email = user.Email,
+            fullName = user.FullName,
+            role = user.Role
+        });
     }
-
     [HttpGet("users")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetUsers()

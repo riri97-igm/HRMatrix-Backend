@@ -75,9 +75,10 @@ public class EmployeesController : ControllerBase
 
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, [FromBody] DeactivateEmployeeRequest request)
     {
-        var (success, message) = await _employeeService.DeactivateEmployeeAsync(id);
+        var (success, message) = await _employeeService.DeactivateEmployeeAsync(
+            id, request.Status, request.ResignationDate, request.Remarks);
         if (!success) return NotFound(new { message });
         return Ok(new { message });
     }

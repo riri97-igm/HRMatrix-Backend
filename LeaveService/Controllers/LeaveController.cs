@@ -1,4 +1,5 @@
 ﻿using LeaveService.DTOs;
+using LeaveService.Models;
 using LeaveService.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -51,6 +52,34 @@ public class LeaveController : ControllerBase
     {
         var leaves = await _leaveService.GetPendingLeavesAsync();
         return Ok(leaves);
+    }
+    // Get approved unpaid leaves for employee in specific month/year
+    [HttpGet("unpaid")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetApprovedUnpaidLeaves(
+        [FromQuery] int employeeId,
+        [FromQuery] int month,
+        [FromQuery] int year)
+    {
+        var leaves = await _leaveService.GetMyLeavesAsync(employeeId);
+
+        var unpaidLeaves = leaves.Where(l =>
+            l.Status == "Approved" &&
+            l.LeaveType == "Unpaid" &&
+            DateTime.Parse(l.StartDate.ToString()).Month == month &&
+            DateTime.Parse(l.StartDate.ToString()).Year == year)
+            .ToList();
+
+        var totalUnpaidDays = unpaidLeaves.Sum(l => l.TotalDays);
+
+        return Ok(new
+        {
+            employeeId,
+            month,
+            year,
+            totalUnpaidDays,
+            leaves = unpaidLeaves
+        });
     }
 
     [HttpPut("{id}/review")]

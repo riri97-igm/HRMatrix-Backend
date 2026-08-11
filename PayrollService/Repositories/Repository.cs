@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using PayrollService.Properties.Data;
+using PayrollService.Data;
 
 namespace PayrollService.Repositories;
 

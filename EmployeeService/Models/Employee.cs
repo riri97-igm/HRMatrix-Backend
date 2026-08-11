@@ -1,5 +1,14 @@
 ﻿namespace EmployeeService.Models;
 
+public enum EmployeeStatus
+{
+    Active,
+    Resigned,
+    Terminated,
+    Retired,
+    OnLeave
+}
+
 public class Department
 {
     public int Id { get; set; }
@@ -21,5 +30,8 @@ public class Employee
     public decimal BaseSalary { get; set; }
     public DateTime JoinDate { get; set; }
     public bool IsActive { get; set; } = true;
+    public EmployeeStatus Status { get; set; } = EmployeeStatus.Active;
+    public DateTime? ResignationDate { get; set; }
+    public string Remarks { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

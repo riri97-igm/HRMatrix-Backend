@@ -10,5 +10,6 @@ public interface IEmployeeService
     Task<IEnumerable<EmployeeResponse>> GetTeamAsync(int managerId);
     Task<(bool Success, string Message, int? Id)> CreateEmployeeAsync(CreateEmployeeRequest request);
     Task<(bool Success, string Message)> UpdateEmployeeAsync(int id, UpdateEmployeeRequest request);
-    Task<(bool Success, string Message)> DeactivateEmployeeAsync(int id);
+    Task<(bool Success, string Message)> DeactivateEmployeeAsync(
+    int id, string status, DateTime? resignationDate, string remarks);
 }

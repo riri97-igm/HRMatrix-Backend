@@ -26,8 +26,8 @@ public class AppDbContext : DbContext
             e.Property(p => p.GrossSalary).HasColumnType("decimal(18,2)");
             e.Property(p => p.TaxDeduction).HasColumnType("decimal(18,2)");
             e.Property(p => p.SocialSecurity).HasColumnType("decimal(18,2)");
-            e.Property(p => p.CpfEmployee).HasColumnType("decimal(18,2)");
-            e.Property(p => p.CpfEmployer).HasColumnType("decimal(18,2)");
+            e.Property(p => p.Cpfemployee).HasColumnType("decimal(18,2)");
+            e.Property(p => p.Cpfemployer).HasColumnType("decimal(18,2)");
             e.Property(p => p.LoanDeduction).HasColumnType("decimal(18,2)");
             e.Property(p => p.OtherDeduction).HasColumnType("decimal(18,2)");
             e.Property(p => p.TotalDeduction).HasColumnType("decimal(18,2)");

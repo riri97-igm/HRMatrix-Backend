@@ -35,6 +35,8 @@ public class Payslip
     public string Notes { get; set; } = string.Empty;
     public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
     public int GeneratedByUserId { get; set; }
+    public decimal UnpaidLeaveDeduction { get; set; }
+    public int UnpaidLeaveDays { get; set; }
 
 }
 

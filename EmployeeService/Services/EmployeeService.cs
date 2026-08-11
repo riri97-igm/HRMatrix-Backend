@@ -91,15 +91,20 @@ public class EmployeeService : IEmployeeService
         return (true, "Employee updated successfully");
     }
 
-    public async Task<(bool Success, string Message)> DeactivateEmployeeAsync(int id)
+    public async Task<(bool Success, string Message)> DeactivateEmployeeAsync(
+     int id, string status, DateTime? resignationDate, string remarks)
     {
         var employee = await _employeeRepo.GetByIdAsync(id);
         if (employee == null) return (false, "Employee not found");
 
         employee.IsActive = false;
+        employee.Status = Enum.Parse<EmployeeStatus>(status);
+        employee.ResignationDate = resignationDate;
+        employee.Remarks = remarks;
+
         _employeeRepo.Update(employee);
         await _employeeRepo.SaveChangesAsync();
-        return (true, "Employee deactivated successfully");
+        return (true, $"Employee {status.ToLower()} successfully");
     }
 
     private static EmployeeResponse MapToResponse(Employee e) => new()
@@ -115,6 +120,9 @@ public class EmployeeService : IEmployeeService
         ManagerId = e.ManagerId,
         BaseSalary = e.BaseSalary,
         JoinDate = e.JoinDate,
-        IsActive = e.IsActive
+        IsActive = e.IsActive,
+        Status = e.Status.ToString(),
+        ResignationDate = e.ResignationDate,
+        Remarks = e.Remarks
     };
 }
