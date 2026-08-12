@@ -18,6 +18,7 @@ public class DepartmentsController : ControllerBase
         _deptRepo = deptRepo;
     }
 
+    // Get all departments
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -25,6 +26,16 @@ public class DepartmentsController : ControllerBase
         return Ok(depts);
     }
 
+    // Get department by ID
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(int id)
+    {
+        var dept = await _deptRepo.GetByIdAsync(id);
+        if (dept == null) return NotFound(new { message = "Department not found" });
+        return Ok(dept);
+    }
+
+    // Create department
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([FromBody] DepartmentRequest request)
@@ -36,5 +47,39 @@ public class DepartmentsController : ControllerBase
         await _deptRepo.AddAsync(dept);
         await _deptRepo.SaveChangesAsync();
         return Ok(new { message = "Department created", id = dept.Id });
+    }
+
+    // Update department
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Update(int id, [FromBody] DepartmentRequest request)
+    {
+        var dept = await _deptRepo.GetByIdAsync(id);
+        if (dept == null) return NotFound(new { message = "Department not found" });
+
+        if (await _deptRepo.NameExistsAsync(request.Name) && dept.Name != request.Name)
+            return BadRequest(new { message = "Department name already exists" });
+
+        dept.Name = request.Name;
+        _deptRepo.Update(dept);
+        await _deptRepo.SaveChangesAsync();
+        return Ok(new { message = "Department updated" });
+    }
+
+    // Delete department
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var dept = await _deptRepo.GetByIdAsync(id);
+        if (dept == null) return NotFound(new { message = "Department not found" });
+
+        // Check if department has employees
+        if (await _deptRepo.HasEmployeesAsync(id))
+            return BadRequest(new { message = "Cannot delete department with active employees" });
+
+        _deptRepo.Delete(dept);
+        await _deptRepo.SaveChangesAsync();
+        return Ok(new { message = "Department deleted" });
     }
 }

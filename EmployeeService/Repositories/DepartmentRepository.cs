@@ -11,4 +11,7 @@ public class DepartmentRepository : Repository<Department>, IDepartmentRepositor
 
     public async Task<bool> NameExistsAsync(string name) =>
         await _db.Departments.AnyAsync(d => d.Name == name);
+
+    public async Task<bool> HasEmployeesAsync(int departmentId) =>
+        await _db.Employees.AnyAsync(e => e.DepartmentId == departmentId && e.IsActive);
 }
