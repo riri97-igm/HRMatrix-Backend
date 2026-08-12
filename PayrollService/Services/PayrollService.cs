@@ -108,8 +108,9 @@ public class PayrollService : IPayrollService
             var age = request.EmployeeAge ?? 30;
             var (empContrib, erContrib) = await _taxService
                 .CalculateAgeBasedContributionAsync(request.CountryCode, grossSalary, age);
-            cpfEmployee = empContrib;
-            cpfEmployer = erContrib;
+            cpfEmployee = empContrib;   // stored for reference only
+            cpfEmployer = erContrib;    // stored for reference only
+                                        // CPF is NOT deducted from salary - employee pays directly to IRAS
         }
         else
         {
@@ -118,9 +119,10 @@ public class PayrollService : IPayrollService
         }
 
         // 4. Calculate total deduction
+        // Remove cpfEmployee from total deduction
         var totalDeduction = taxDeduction
             + socialSecurity
-            + cpfEmployee
+            // + cpfEmployee  ← REMOVE THIS
             + loanDeduction
             + request.OtherDeduction;
 
@@ -132,6 +134,7 @@ public class PayrollService : IPayrollService
         {
             EmployeeId = request.EmployeeId,
             EmployeeName = request.EmployeeName,
+            DepartmentName = request.DepartmentName,
             Month = request.Month,
             Year = request.Year,
             Country = policy.CountryName,
@@ -192,36 +195,45 @@ public class PayrollService : IPayrollService
         return MapToResponse(payslip);
     }
 
-    // Create Loan 
-    public async Task<(bool Success, string Message, int? Id)> CreateLoanAsync(
-        CreateLoanRequest request)
+    // Apply Loan
+    public async Task<(bool Success, string Message, int? Id)> ApplyLoanAsync(
+        ApplyLoanRequest request)
     {
-        if (request.TotalLoanAmount <= 0)
-            return (false, "Loan amount must be greater than 0", null);
-        if (request.MonthlyDeduction <= 0)
-            return (false, "Monthly deduction must be greater than 0", null);
-        if (request.MonthlyDeduction > request.TotalLoanAmount)
-            return (false, "Monthly deduction cannot exceed total loan amount", null);
+        // Check if employee already has active loan
+        if (await _loanRepo.HasActiveLoanAsync(request.EmployeeId))
+            return (false, "Employee already has an active or pending loan", null);
+
+        // Validate loan type
+        if (!Enum.TryParse<LoanType>(request.LoanType, out var loanType))
+            return (false, "Invalid loan type", null);
+
+        // Calculate monthly deduction (fixed 12 months)
+        var monthlyDeduction = Math.Round(request.RequestedAmount / 12, 2);
 
         var loan = new EmployeeLoan
         {
             EmployeeId = request.EmployeeId,
             EmployeeName = request.EmployeeName,
-            TotalLoanAmount = request.TotalLoanAmount,
-            MonthlyDeduction = request.MonthlyDeduction,
-            RemainingBalance = request.TotalLoanAmount,
-            StartDate = request.StartDate,
-            Notes = request.Notes,
-            IsSettled = false
+            DepartmentName = request.DepartmentName,
+            ManagerId = request.ManagerId,
+            LoanType = loanType,
+            RequestedAmount = request.RequestedAmount,
+            TotalLoanAmount = request.RequestedAmount,
+            MonthlyDeduction = monthlyDeduction,
+            RemainingBalance = request.RequestedAmount,
+            RepaymentMonths = 12,
+            Purpose = request.Purpose,
+            Status = LoanStatus.Pending,
+            AppliedDate = DateTime.UtcNow
         };
 
         await _loanRepo.AddAsync(loan);
         await _loanRepo.SaveChangesAsync();
-        return (true, "Loan registered successfully", loan.Id);
+        return (true, "Loan application submitted successfully", loan.Id);
     }
 
-    // Get Loans By Employee
-    public async Task<IEnumerable<LoanResponse>> GetLoansByEmployeeIdAsync(int employeeId)
+    // Get My Loans 
+    public async Task<IEnumerable<LoanResponse>> GetMyLoansAsync(int employeeId)
     {
         var loans = await _loanRepo.GetByEmployeeIdAsync(employeeId);
         return loans.Select(MapLoanToResponse);
@@ -234,6 +246,114 @@ public class PayrollService : IPayrollService
         return loans.Select(MapLoanToResponse);
     }
 
+    //  Get Loans By Employee 
+    public async Task<IEnumerable<LoanResponse>> GetLoansByEmployeeIdAsync(int employeeId)
+    {
+        var loans = await _loanRepo.GetByEmployeeIdAsync(employeeId);
+        return loans.Select(MapLoanToResponse);
+    }
+
+    // Get Pending HR Loans
+    public async Task<IEnumerable<LoanResponse>> GetPendingHRLoansAsync()
+    {
+        var loans = await _loanRepo.GetPendingHRLoansAsync();
+        return loans.Select(MapLoanToResponse);
+    }
+
+    //  Get Pending Manager Loans 
+    public async Task<IEnumerable<LoanResponse>> GetPendingManagerLoansAsync(int managerId)
+    {
+        var loans = await _loanRepo.GetPendingManagerLoansAsync(managerId);
+        return loans.Select(MapLoanToResponse);
+    }
+
+    //  Get Pending CFO Loans 
+    public async Task<IEnumerable<LoanResponse>> GetPendingCFOLoansAsync()
+    {
+        var loans = await _loanRepo.GetPendingCFOLoansAsync();
+        return loans.Select(MapLoanToResponse);
+    }
+
+    // HR Approve Loan
+    public async Task<(bool Success, string Message)> HRApproveLoanAsync(
+        int loanId, int approverId, ApproveLoanRequest request)
+    {
+        var loan = await _loanRepo.GetByIdAsync(loanId);
+        if (loan == null) return (false, "Loan not found");
+        if (loan.Status != LoanStatus.Pending)
+            return (false, "Loan is not in pending status");
+
+        loan.Status = LoanStatus.HRApproved;
+        loan.HRApprovedBy = approverId;
+        loan.HRApprovedByName = request.ApproverName;
+        loan.HRApprovedAt = DateTime.UtcNow;
+        loan.HRComment = request.Comment;
+
+        _loanRepo.Update(loan);
+        await _loanRepo.SaveChangesAsync();
+        return (true, "Loan approved by HR");
+    }
+
+    // Manager Approve Loan
+    public async Task<(bool Success, string Message)> ManagerApproveLoanAsync(
+        int loanId, int approverId, ApproveLoanRequest request)
+    {
+        var loan = await _loanRepo.GetByIdAsync(loanId);
+        if (loan == null) return (false, "Loan not found");
+        if (loan.Status != LoanStatus.HRApproved)
+            return (false, "Loan must be HR approved first");
+
+        loan.Status = LoanStatus.ManagerApproved;
+        loan.ManagerApprovedBy = approverId;
+        loan.ManagerApprovedByName = request.ApproverName;
+        loan.ManagerApprovedAt = DateTime.UtcNow;
+        loan.ManagerComment = request.Comment;
+
+        _loanRepo.Update(loan);
+        await _loanRepo.SaveChangesAsync();
+        return (true, "Loan approved by Manager");
+    }
+
+    // CFO Approve Loan 
+    public async Task<(bool Success, string Message)> CFOApproveLoanAsync(
+        int loanId, int approverId, ApproveLoanRequest request)
+    {
+        var loan = await _loanRepo.GetByIdAsync(loanId);
+        if (loan == null) return (false, "Loan not found");
+        if (loan.Status != LoanStatus.ManagerApproved)
+            return (false, "Loan must be Manager approved first");
+
+        loan.Status = LoanStatus.Approved;
+        loan.CFOApprovedBy = approverId;
+        loan.CFOApprovedByName = request.ApproverName;
+        loan.CFOApprovedAt = DateTime.UtcNow;
+        loan.CFOComment = request.Comment;
+        loan.StartDate = DateTime.UtcNow;
+
+        _loanRepo.Update(loan);
+        await _loanRepo.SaveChangesAsync();
+        return (true, "Loan fully approved by CFO — loan is now active");
+    }
+
+    // Reject Loan
+    public async Task<(bool Success, string Message)> RejectLoanAsync(
+        int loanId, int rejectorId, RejectLoanRequest request)
+    {
+        var loan = await _loanRepo.GetByIdAsync(loanId);
+        if (loan == null) return (false, "Loan not found");
+        if (loan.Status == LoanStatus.Approved || loan.Status == LoanStatus.Settled)
+            return (false, "Cannot reject an approved or settled loan");
+
+        loan.Status = LoanStatus.Rejected;
+        loan.RejectedByName = request.RejectedByName;
+        loan.RejectionReason = request.Reason;
+        loan.RejectedAt = DateTime.UtcNow;
+
+        _loanRepo.Update(loan);
+        await _loanRepo.SaveChangesAsync();
+        return (true, "Loan rejected");
+    }
+
     // Settle Loan 
     public async Task<(bool Success, string Message)> SettleLoanAsync(int loanId)
     {
@@ -242,6 +362,7 @@ public class PayrollService : IPayrollService
         if (loan.IsSettled) return (false, "Loan already settled");
 
         loan.IsSettled = true;
+        loan.Status = LoanStatus.Settled;
         loan.RemainingBalance = 0;
         loan.SettledDate = DateTime.UtcNow;
 
@@ -256,6 +377,7 @@ public class PayrollService : IPayrollService
         Id = p.Id,
         EmployeeId = p.EmployeeId,
         EmployeeName = p.EmployeeName,
+        DepartmentName = p.DepartmentName,
         Month = p.Month,
         Year = p.Year,
         Country = p.Country,
@@ -282,13 +404,33 @@ public class PayrollService : IPayrollService
         Id = l.Id,
         EmployeeId = l.EmployeeId,
         EmployeeName = l.EmployeeName,
+        DepartmentName = l.DepartmentName,
+        ManagerId = l.ManagerId,
+        LoanType = l.LoanType.ToString(),
+        RequestedAmount = l.RequestedAmount,
         TotalLoanAmount = l.TotalLoanAmount,
         MonthlyDeduction = l.MonthlyDeduction,
         RemainingBalance = l.RemainingBalance,
+        RepaymentMonths = l.RepaymentMonths,
+        Purpose = l.Purpose,
+        Status = l.Status.ToString(),
         IsSettled = l.IsSettled,
+        AppliedDate = l.AppliedDate,
         StartDate = l.StartDate,
         SettledDate = l.SettledDate,
-        Notes = l.Notes
+        HRApprovedByName = l.HRApprovedByName,
+        HRApprovedAt = l.HRApprovedAt,
+        HRComment = l.HRComment,
+        ManagerApprovedByName = l.ManagerApprovedByName,
+        ManagerApprovedAt = l.ManagerApprovedAt,
+        ManagerComment = l.ManagerComment,
+        CFOApprovedByName = l.CFOApprovedByName,
+        CFOApprovedAt = l.CFOApprovedAt,
+        CFOComment = l.CFOComment,
+        RejectedByName = l.RejectedByName,
+        RejectionReason = l.RejectionReason,
+        RejectedAt = l.RejectedAt,
+        Notes = l.Notes,
     };
     public class UnpaidLeaveResponse
     {

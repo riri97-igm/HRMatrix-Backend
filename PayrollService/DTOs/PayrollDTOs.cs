@@ -4,6 +4,7 @@ public class GeneratePayslipRequest
 {
     public int EmployeeId { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
+    public string DepartmentName { get; set; } = string.Empty;
     public int Month { get; set; }
     public int Year { get; set; }
     public string Country { get; set; } = "Myanmar"; //can change contry 
@@ -35,6 +36,7 @@ public class PayslipResponse
     public int Id { get; set; }
     public int EmployeeId { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
+    public string DepartmentName { get; set; } = string.Empty;
     public int Month { get; set; }
     public int Year { get; set; }
     public string Country { get; set; } = string.Empty;
@@ -68,31 +70,6 @@ public class PayslipResponse
     public decimal UnpaidLeaveDeduction { get; set; }
     public int UnpaidLeaveDays { get; set; }
 }
-
-public class CreateLoanRequest
-{
-    public int EmployeeId { get; set; }
-    public string EmployeeName { get; set; } = string.Empty;
-    public decimal TotalLoanAmount { get; set; }
-    public decimal MonthlyDeduction { get; set; }
-    public DateTime StartDate { get; set; }
-    public string Notes { get; set; } = string.Empty;
-}
-
-public class LoanResponse
-{
-    public int Id { get; set; }
-    public int EmployeeId { get; set; }
-    public string EmployeeName { get; set; } = string.Empty;
-    public decimal TotalLoanAmount { get; set; }
-    public decimal MonthlyDeduction { get; set; }
-    public decimal RemainingBalance { get; set; }
-    public bool IsSettled { get; set; }
-    public DateTime StartDate { get; set; }
-    public DateTime? SettledDate { get; set; }
-    public string Notes { get; set; } = string.Empty;
-}
-
 public class CountryPolicyResponse
 {
     public int Id { get; set; }
@@ -161,4 +138,65 @@ public class CreateAgeBracketRequest
     public decimal EmployeeRate { get; set; }
     public decimal EmployerRate { get; set; }
     public string Description { get; set; } = string.Empty;
+}
+public class ApplyLoanRequest
+{
+    public int EmployeeId { get; set; }
+    public string EmployeeName { get; set; } = string.Empty;
+    public string DepartmentName { get; set; } = string.Empty;
+    public int? ManagerId { get; set; }
+    public string LoanType { get; set; } = string.Empty;
+    public decimal RequestedAmount { get; set; }
+    public string Purpose { get; set; } = string.Empty;
+}
+
+public class ApproveLoanRequest
+{
+    public string Comment { get; set; } = string.Empty;
+    public string ApproverName { get; set; } = string.Empty;
+}
+
+public class RejectLoanRequest
+{
+    public string Reason { get; set; } = string.Empty;
+    public string RejectedByName { get; set; } = string.Empty;
+}
+
+public class LoanResponse
+{
+    public int Id { get; set; }
+    public int EmployeeId { get; set; }
+    public string EmployeeName { get; set; } = string.Empty;
+    public string DepartmentName { get; set; } = string.Empty;
+    public int? ManagerId { get; set; }
+    public string LoanType { get; set; } = string.Empty;
+    public decimal RequestedAmount { get; set; }
+    public decimal TotalLoanAmount { get; set; }
+    public decimal MonthlyDeduction { get; set; }
+    public decimal RemainingBalance { get; set; }
+    public int RepaymentMonths { get; set; }
+    public string Purpose { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public bool IsSettled { get; set; }
+    public DateTime AppliedDate { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? SettledDate { get; set; }
+
+    // Approvals
+    public string HRApprovedByName { get; set; } = string.Empty;
+    public DateTime? HRApprovedAt { get; set; }
+    public string HRComment { get; set; } = string.Empty;
+
+    public string ManagerApprovedByName { get; set; } = string.Empty;
+    public DateTime? ManagerApprovedAt { get; set; }
+    public string ManagerComment { get; set; } = string.Empty;
+
+    public string CFOApprovedByName { get; set; } = string.Empty;
+    public DateTime? CFOApprovedAt { get; set; }
+    public string CFOComment { get; set; } = string.Empty;
+
+    public string RejectedByName { get; set; } = string.Empty;
+    public string RejectionReason { get; set; } = string.Empty;
+    public DateTime? RejectedAt { get; set; }
+    public string Notes { get; set; } = string.Empty;
 }

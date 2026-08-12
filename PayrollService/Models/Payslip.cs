@@ -4,7 +4,8 @@ public class Payslip
 {
     public int Id { get; set; }
     public int EmployeeId { get; set; }
-    public string EmployeeName { get; set; } = string.Empty;   
+    public string EmployeeName { get; set; } = string.Empty;
+    public string DepartmentName { get; set; } = string.Empty;
     public int Month { get; set; }
     public int Year { get; set; }
     public string Country { get; set; } = string.Empty;
@@ -40,18 +41,78 @@ public class Payslip
 
 }
 
+public enum LoanStatus
+{
+    Pending,
+    HRApproved,
+    ManagerApproved,
+    Approved,
+    Rejected,
+    Settled
+}
+
+public enum LoanType
+{
+    Personal,
+    Emergency,
+    Education,
+    Equipment,
+    Medical,
+    FestivalAdvance
+}
+
 public class EmployeeLoan
 {
     public int Id { get; set; }
     public int EmployeeId { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
+    public string DepartmentName { get; set; } = string.Empty;
+    public int? ManagerId { get; set; }
+
+    // Loan Details
+    public LoanType LoanType { get; set; } = LoanType.Personal;
+    public string LoanTypeDisplay => LoanType.ToString();
+    public decimal RequestedAmount { get; set; }
     public decimal TotalLoanAmount { get; set; }
     public decimal MonthlyDeduction { get; set; }
     public decimal RemainingBalance { get; set; }
+    public int RepaymentMonths { get; set; } = 12;
+    public string Purpose { get; set; } = string.Empty;
+
+    // Status
+    public LoanStatus Status { get; set; } = LoanStatus.Pending;
     public bool IsSettled { get; set; } = false;
-    public DateTime StartDate { get; set; }
+
+    // Dates
+    public DateTime AppliedDate { get; set; } = DateTime.UtcNow;
+    public DateTime? StartDate { get; set; }
     public DateTime? SettledDate { get; set; }
+
+    // HR Approval
+    public int? HRApprovedBy { get; set; }
+    public string HRApprovedByName { get; set; } = string.Empty;
+    public DateTime? HRApprovedAt { get; set; }
+    public string HRComment { get; set; } = string.Empty;
+
+    // Manager Approval
+    public int? ManagerApprovedBy { get; set; }
+    public string ManagerApprovedByName { get; set; } = string.Empty;
+    public DateTime? ManagerApprovedAt { get; set; }
+    public string ManagerComment { get; set; } = string.Empty;
+
+    // CFO Approval
+    public int? CFOApprovedBy { get; set; }
+    public string CFOApprovedByName { get; set; } = string.Empty;
+    public DateTime? CFOApprovedAt { get; set; }
+    public string CFOComment { get; set; } = string.Empty;
+
+    // Rejection
+    public string RejectedByName { get; set; } = string.Empty;
+    public string RejectionReason { get; set; } = string.Empty;
+    public DateTime? RejectedAt { get; set; }
+
     public string Notes { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class TaxBracket

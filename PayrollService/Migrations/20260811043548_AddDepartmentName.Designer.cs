@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PayrollService.Data;
 
@@ -11,9 +12,11 @@ using PayrollService.Data;
 namespace PayrollService.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260811043548_AddDepartmentName")]
+    partial class AddDepartmentName
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -153,7 +156,7 @@ namespace PayrollService.Migrations
                             Id = 1,
                             CountryCode = "MM",
                             CountryName = "Myanmar",
-                            CreatedAt = new DateTime(2026, 8, 12, 4, 7, 57, 831, DateTimeKind.Utc).AddTicks(2661),
+                            CreatedAt = new DateTime(2026, 8, 11, 4, 35, 47, 129, DateTimeKind.Utc).AddTicks(2683),
                             Currency = "MMK",
                             FlagEmoji = "🇲🇲",
                             HasAgeBased = false,
@@ -168,7 +171,7 @@ namespace PayrollService.Migrations
                             Id = 2,
                             CountryCode = "SG",
                             CountryName = "Singapore",
-                            CreatedAt = new DateTime(2026, 8, 12, 4, 7, 57, 831, DateTimeKind.Utc).AddTicks(2694),
+                            CreatedAt = new DateTime(2026, 8, 11, 4, 35, 47, 129, DateTimeKind.Utc).AddTicks(2722),
                             Currency = "SGD",
                             FlagEmoji = "🇸🇬",
                             HasAgeBased = true,
@@ -183,7 +186,7 @@ namespace PayrollService.Migrations
                             Id = 3,
                             CountryCode = "TH",
                             CountryName = "Thailand",
-                            CreatedAt = new DateTime(2026, 8, 12, 4, 7, 57, 831, DateTimeKind.Utc).AddTicks(2695),
+                            CreatedAt = new DateTime(2026, 8, 11, 4, 35, 47, 129, DateTimeKind.Utc).AddTicks(2723),
                             Currency = "THB",
                             FlagEmoji = "🇹🇭",
                             HasAgeBased = false,
@@ -198,7 +201,7 @@ namespace PayrollService.Migrations
                             Id = 4,
                             CountryCode = "MY",
                             CountryName = "Malaysia",
-                            CreatedAt = new DateTime(2026, 8, 12, 4, 7, 57, 831, DateTimeKind.Utc).AddTicks(2696),
+                            CreatedAt = new DateTime(2026, 8, 11, 4, 35, 47, 129, DateTimeKind.Utc).AddTicks(2725),
                             Currency = "MYR",
                             FlagEmoji = "🇲🇾",
                             HasAgeBased = false,
@@ -213,7 +216,7 @@ namespace PayrollService.Migrations
                             Id = 5,
                             CountryCode = "PH",
                             CountryName = "Philippines",
-                            CreatedAt = new DateTime(2026, 8, 12, 4, 7, 57, 831, DateTimeKind.Utc).AddTicks(2698),
+                            CreatedAt = new DateTime(2026, 8, 11, 4, 35, 47, 129, DateTimeKind.Utc).AddTicks(2726),
                             Currency = "PHP",
                             FlagEmoji = "🇵🇭",
                             HasAgeBased = false,
@@ -233,30 +236,6 @@ namespace PayrollService.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("AppliedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("CFOApprovedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("CFOApprovedBy")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CFOApprovedByName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("CFOComment")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DepartmentName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<int>("EmployeeId")
                         .HasColumnType("int");
 
@@ -264,42 +243,8 @@ namespace PayrollService.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("HRApprovedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("HRApprovedBy")
-                        .HasColumnType("int");
-
-                    b.Property<string>("HRApprovedByName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("HRComment")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool>("IsSettled")
                         .HasColumnType("bit");
-
-                    b.Property<int>("LoanType")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("ManagerApprovedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("ManagerApprovedBy")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ManagerApprovedByName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ManagerComment")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("ManagerId")
-                        .HasColumnType("int");
 
                     b.Property<decimal>("MonthlyDeduction")
                         .HasColumnType("decimal(18,2)");
@@ -308,38 +253,14 @@ namespace PayrollService.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Purpose")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("RejectedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("RejectedByName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("RejectionReason")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<decimal>("RemainingBalance")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("RepaymentMonths")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("RequestedAmount")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("SettledDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("StartDate")
+                    b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
 
                     b.Property<decimal>("TotalLoanAmount")
                         .HasColumnType("decimal(18,2)");
