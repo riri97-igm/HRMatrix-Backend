@@ -274,34 +274,14 @@ public class PayrollService : IPayrollService
         return loans.Select(MapLoanToResponse);
     }
 
-    // HR Approve Loan
-    public async Task<(bool Success, string Message)> HRApproveLoanAsync(
-        int loanId, int approverId, ApproveLoanRequest request)
-    {
-        var loan = await _loanRepo.GetByIdAsync(loanId);
-        if (loan == null) return (false, "Loan not found");
-        if (loan.Status != LoanStatus.Pending)
-            return (false, "Loan is not in pending status");
-
-        loan.Status = LoanStatus.HRApproved;
-        loan.HRApprovedBy = approverId;
-        loan.HRApprovedByName = request.ApproverName;
-        loan.HRApprovedAt = DateTime.UtcNow;
-        loan.HRComment = request.Comment;
-
-        _loanRepo.Update(loan);
-        await _loanRepo.SaveChangesAsync();
-        return (true, "Loan approved by HR");
-    }
-
-    // Manager Approve Loan
+    // Manager Approve Loan (FIRST) 
     public async Task<(bool Success, string Message)> ManagerApproveLoanAsync(
         int loanId, int approverId, ApproveLoanRequest request)
     {
         var loan = await _loanRepo.GetByIdAsync(loanId);
         if (loan == null) return (false, "Loan not found");
-        if (loan.Status != LoanStatus.HRApproved)
-            return (false, "Loan must be HR approved first");
+        if (loan.Status != LoanStatus.Pending)
+            return (false, "Loan must be in Pending status");
 
         loan.Status = LoanStatus.ManagerApproved;
         loan.ManagerApprovedBy = approverId;
@@ -311,17 +291,37 @@ public class PayrollService : IPayrollService
 
         _loanRepo.Update(loan);
         await _loanRepo.SaveChangesAsync();
-        return (true, "Loan approved by Manager");
+        return (true, "Loan approved by Manager — forwarded to HR");
     }
 
-    // CFO Approve Loan 
-    public async Task<(bool Success, string Message)> CFOApproveLoanAsync(
+    // HR Approve Loan (SECOND) 
+    public async Task<(bool Success, string Message)> HRApproveLoanAsync(
         int loanId, int approverId, ApproveLoanRequest request)
     {
         var loan = await _loanRepo.GetByIdAsync(loanId);
         if (loan == null) return (false, "Loan not found");
         if (loan.Status != LoanStatus.ManagerApproved)
             return (false, "Loan must be Manager approved first");
+
+        loan.Status = LoanStatus.HRApproved;
+        loan.HRApprovedBy = approverId;
+        loan.HRApprovedByName = request.ApproverName;
+        loan.HRApprovedAt = DateTime.UtcNow;
+        loan.HRComment = request.Comment;
+
+        _loanRepo.Update(loan);
+        await _loanRepo.SaveChangesAsync();
+        return (true, "Loan approved by HR — forwarded to CFO");
+    }
+
+    // CFO Approve Loan (THIRD - FINAL) 
+    public async Task<(bool Success, string Message)> CFOApproveLoanAsync(
+        int loanId, int approverId, ApproveLoanRequest request)
+    {
+        var loan = await _loanRepo.GetByIdAsync(loanId);
+        if (loan == null) return (false, "Loan not found");
+        if (loan.Status != LoanStatus.HRApproved)
+            return (false, "Loan must be HR approved first");
 
         loan.Status = LoanStatus.Approved;
         loan.CFOApprovedBy = approverId;
@@ -332,7 +332,7 @@ public class PayrollService : IPayrollService
 
         _loanRepo.Update(loan);
         await _loanRepo.SaveChangesAsync();
-        return (true, "Loan fully approved by CFO — loan is now active");
+        return (true, "Loan fully approved — loan is now active");
     }
 
     // Reject Loan

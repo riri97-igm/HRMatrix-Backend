@@ -27,29 +27,29 @@ public class LoanRepository : Repository<EmployeeLoan>, ILoanRepository
             .ToListAsync();
 
     public async Task<IEnumerable<EmployeeLoan>> GetPendingHRLoansAsync() =>
-        await _db.EmployeeLoans
-            .Where(l => l.Status == LoanStatus.Pending)
-            .OrderByDescending(l => l.AppliedDate)
-            .ToListAsync();
+     await _db.EmployeeLoans
+         .Where(l => l.Status == LoanStatus.ManagerApproved)
+         .OrderByDescending(l => l.AppliedDate)
+         .ToListAsync();
 
     public async Task<IEnumerable<EmployeeLoan>> GetPendingManagerLoansAsync(int managerId) =>
         await _db.EmployeeLoans
-            .Where(l => l.Status == LoanStatus.HRApproved
+            .Where(l => l.Status == LoanStatus.Pending
                 && l.ManagerId == managerId)
             .OrderByDescending(l => l.AppliedDate)
             .ToListAsync();
 
     public async Task<IEnumerable<EmployeeLoan>> GetPendingCFOLoansAsync() =>
-        await _db.EmployeeLoans
-            .Where(l => l.Status == LoanStatus.ManagerApproved)
-            .OrderByDescending(l => l.AppliedDate)
-            .ToListAsync();
+       await _db.EmployeeLoans
+           .Where(l => l.Status == LoanStatus.HRApproved)
+           .OrderByDescending(l => l.AppliedDate)
+           .ToListAsync();
 
     public async Task<bool> HasActiveLoanAsync(int employeeId) =>
         await _db.EmployeeLoans
             .AnyAsync(l => l.EmployeeId == employeeId
                 && (l.Status == LoanStatus.Approved && !l.IsSettled
                     || l.Status == LoanStatus.Pending
-                    || l.Status == LoanStatus.HRApproved
-                    || l.Status == LoanStatus.ManagerApproved));
+                    || l.Status == LoanStatus.ManagerApproved
+                    || l.Status == LoanStatus.HRApproved));
 }
