@@ -16,6 +16,16 @@ public class LeaveRepository : Repository<LeaveRequest>, ILeaveRepository
             .Where(l => l.EmployeeId == employeeId)
             .OrderByDescending(l => l.CreatedAt)
             .ToListAsync();
+    public async Task<IEnumerable<LeaveRequest>> GetPendingByManagerAsync(int managerId) =>
+        await _db.LeaveRequests
+            .Where(l => l.Status == LeaveStatus.Pending && l.ManagerId == managerId)
+            .OrderByDescending(l => l.CreatedAt)
+            .ToListAsync();
+    public async Task<IEnumerable<LeaveRequest>> GetByManagerAsync(int managerId) =>
+    await _db.LeaveRequests
+        .Where(l => l.ManagerId == managerId)
+        .OrderByDescending(l => l.CreatedAt)
+        .ToListAsync();
 
     public async Task<IEnumerable<LeaveRequest>> GetPendingAsync() =>
         await _db.LeaveRequests

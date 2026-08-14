@@ -18,6 +18,7 @@ public class LeaveRequest
 {
     public int Id { get; set; }
     public int EmployeeId { get; set; }
+    public int? ManagerId { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
     public LeaveType LeaveType { get; set; }
     public DateTime StartDate { get; set; }

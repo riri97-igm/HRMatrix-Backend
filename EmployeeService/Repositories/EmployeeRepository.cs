@@ -20,10 +20,10 @@ public class EmployeeRepository : Repository<Employee>, IEmployeeRepository
             .FirstOrDefaultAsync(e => e.UserId == userId && e.IsActive);
 
     public async Task<IEnumerable<Employee>> GetByManagerIdAsync(int managerId) =>
-        await _db.Employees
-            .Include(e => e.Department)
-            .Where(e => e.ManagerId == managerId && e.IsActive)
-            .ToListAsync();
+    await _db.Employees
+        .Include(e => e.Department)
+        .Where(e => e.ManagerId == managerId && e.IsActive)
+        .ToListAsync();
 
     public async Task<IEnumerable<Employee>> GetAllWithDepartmentAsync() =>
         await _db.Employees

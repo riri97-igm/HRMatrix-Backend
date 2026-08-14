@@ -17,6 +17,13 @@ public class AppDbContext : DbContext
             .Property(e => e.BaseSalary)
             .HasColumnType("decimal(18,2)");
 
+        // Employee → Department relationship
+        modelBuilder.Entity<Employee>()
+            .HasOne(e => e.Department)
+            .WithMany()
+            .HasForeignKey(e => e.DepartmentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         modelBuilder.Entity<Department>().HasData(
             new Department { Id = 1, Name = "Engineering" },
             new Department { Id = 2, Name = "Human Resources" },

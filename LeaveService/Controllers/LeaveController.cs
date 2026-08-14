@@ -38,11 +38,29 @@ public class LeaveController : ControllerBase
         return Ok(leaves);
     }
 
-    [HttpGet("balance")]
-    public async Task<IActionResult> GetBalance([FromQuery] DateTime joinDate)
+    [HttpGet("my-team")]
+    [Authorize(Roles = "Manager")]
+    public async Task<IActionResult> GetMyTeamLeaves()
     {
-        var employeeId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var balance = await _leaveService.GetBalanceAsync(employeeId, joinDate);
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var manager = await _leaveService.GetLeavesByManagerAsync(userId);
+        return Ok(manager);
+    }
+
+    [HttpGet("balance")]
+    public async Task<IActionResult> GetBalance(
+     [FromQuery] DateTime joinDate,
+     [FromQuery] int? employeeId)
+    {
+        var role = User.FindFirstValue(ClaimTypes.Role)!;
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        // Admin can pass employeeId, others use their own
+        var targetEmployeeId = (role == "Admin" && employeeId.HasValue)
+            ? employeeId.Value
+            : userId;
+
+        var balance = await _leaveService.GetBalanceAsync(targetEmployeeId, joinDate);
         return Ok(balance);
     }
 
@@ -50,8 +68,19 @@ public class LeaveController : ControllerBase
     [Authorize(Roles = "Manager,Admin")]
     public async Task<IActionResult> GetPending()
     {
-        var leaves = await _leaveService.GetPendingLeavesAsync();
-        return Ok(leaves);
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var role = User.FindFirstValue(ClaimTypes.Role)!;
+
+        if (role == "Admin")
+        {
+            var leaves = await _leaveService.GetPendingLeavesAsync();
+            return Ok(leaves);
+        }
+        else
+        {
+            var leaves = await _leaveService.GetPendingLeavesByManagerAsync(userId);
+            return Ok(leaves);
+        }
     }
     // Get approved unpaid leaves for employee in specific month/year
     [HttpGet("unpaid")]

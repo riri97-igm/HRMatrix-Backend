@@ -15,4 +15,6 @@ public interface ILeaveService
     int CalculateWorkingDays(DateTime startDate, DateTime endDate);
     int CalculateAnnualEntitlement(DateTime joinDate, int year);
     Task ProcessYearEndCarryForwardAsync(int employeeId, DateTime joinDate);
+    Task<IEnumerable<LeaveRequestResponse>> GetPendingLeavesByManagerAsync(int managerId);
+    Task<IEnumerable<LeaveRequestResponse>> GetLeavesByManagerAsync(int managerId);
 }

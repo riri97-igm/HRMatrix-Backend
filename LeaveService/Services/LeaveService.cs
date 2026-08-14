@@ -143,7 +143,8 @@ public class LeaveService : ILeaveService
             EndDate = request.EndDate,
             TotalDays = workingDays,
             Reason = request.Reason,
-            Status = LeaveStatus.Pending
+            ManagerId = request.ManagerId, // ← add this
+            Status = LeaveStatus.Pending,
         };
 
         await _leaveRepo.AddAsync(leave);
@@ -211,6 +212,11 @@ public class LeaveService : ILeaveService
         await _balanceRepo.AddAsync(newBalance);
         await _balanceRepo.SaveChangesAsync();
     }
+    public async Task<IEnumerable<LeaveRequestResponse>> GetLeavesByManagerAsync(int managerId)
+    {
+        var leaves = await _leaveRepo.GetByManagerAsync(managerId);
+        return leaves.Select(MapToResponse);
+    }
 
     //  Review leave
     public async Task<(bool Success, string Message)> ReviewLeaveAsync(
@@ -246,6 +252,12 @@ public class LeaveService : ILeaveService
         return (true, $"Leave {(request.IsApproved ? "approved" : "rejected")} successfully");
     }
 
+    public async Task<IEnumerable<LeaveRequestResponse>> GetPendingLeavesByManagerAsync(int managerId)
+    {
+        var leaves = await _leaveRepo.GetPendingByManagerAsync(managerId);
+        return leaves.Select(MapToResponse);
+    }
+
     public async Task<IEnumerable<LeaveRequestResponse>> GetMyLeavesAsync(int employeeId)
     {
         var leaves = await _leaveRepo.GetByEmployeeIdAsync(employeeId);
@@ -268,6 +280,7 @@ public class LeaveService : ILeaveService
     {
         Id = l.Id,
         EmployeeId = l.EmployeeId,
+        ManagerId = l.ManagerId,
         EmployeeName = l.EmployeeName,
         LeaveType = l.LeaveType.ToString(),
         StartDate = l.StartDate,

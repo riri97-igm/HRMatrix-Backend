@@ -9,6 +9,8 @@ public interface ILeaveRepository : IRepository<LeaveRequest>
     Task<IEnumerable<LeaveRequest>> GetByEmployeeIdAsync(int employeeId);
     Task<IEnumerable<LeaveRequest>> GetPendingAsync();
     Task<IEnumerable<LeaveRequest>> GetAllOrderedAsync();
+    Task<IEnumerable<LeaveRequest>> GetPendingByManagerAsync(int managerId);
+    Task<IEnumerable<LeaveRequest>> GetByManagerAsync(int managerId);
 }
 
 public interface ILeaveBalanceRepository : IRepository<LeaveBalance>

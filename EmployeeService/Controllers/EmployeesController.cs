@@ -32,7 +32,13 @@ public class EmployeesController : ControllerBase
     public async Task<IActionResult> GetTeam()
     {
         var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var employees = await _employeeService.GetTeamAsync(userId);
+
+        // Get manager's employee record first
+        var manager = await _employeeService.GetMyProfileAsync(userId);
+        if (manager == null) return NotFound();
+
+        // Then get team by manager's employee ID
+        var employees = await _employeeService.GetTeamAsync(manager.Id);
         return Ok(employees);
     }
 
@@ -43,6 +49,16 @@ public class EmployeesController : ControllerBase
         var employee = await _employeeService.GetMyProfileAsync(userId);
         if (employee == null) return NotFound();
         return Ok(employee);
+    }
+    // Employee updates own personal info
+    [HttpPut("me/personal")]
+    [Authorize]
+    public async Task<IActionResult> UpdatePersonalInfo([FromBody] UpdatePersonalInfoRequest request)
+    {
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var result = await _employeeService.UpdatePersonalInfoAsync(userId, request);
+        if (!result.Success) return BadRequest(new { message = result.Message });
+        return Ok(new { message = result.Message });
     }
 
     [HttpGet("{id}")]

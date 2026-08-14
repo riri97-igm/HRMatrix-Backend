@@ -12,4 +12,5 @@ public interface IEmployeeService
     Task<(bool Success, string Message)> UpdateEmployeeAsync(int id, UpdateEmployeeRequest request);
     Task<(bool Success, string Message)> DeactivateEmployeeAsync(
     int id, string status, DateTime? resignationDate, string remarks);
+    Task<(bool Success, string Message)> UpdatePersonalInfoAsync(int userId, UpdatePersonalInfoRequest request);
 }

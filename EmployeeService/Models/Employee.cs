@@ -24,15 +24,23 @@ public class Employee
     public string Email { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
     public string Position { get; set; } = string.Empty;
-    public int DepartmentId { get; set; }
     public Department? Department { get; set; }
+    public int DepartmentId { get; set; }
     public int? ManagerId { get; set; }
     public decimal BaseSalary { get; set; }
     public DateTime JoinDate { get; set; }
     public bool IsActive { get; set; } = true;
-    public EmployeeStatus Status { get; set; } = EmployeeStatus.Active;
+    public string Status { get; set; } = "Active";
     public DateTime? ResignationDate { get; set; }
     public string Remarks { get; set; } = string.Empty;
+
+    // New Personal Info Fields
+    public string Address { get; set; } = string.Empty;
+    public DateTime? Birthday { get; set; }
+    public string EmergencyContactName { get; set; } = string.Empty;
+    public string EmergencyContactPhone { get; set; } = string.Empty;
+    public string EmergencyContactRelation { get; set; } = string.Empty;
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 public class AuditLog

@@ -10,9 +10,8 @@ public class CreateLeaveRequest
     public DateTime EndDate { get; set; }
     public string Reason { get; set; } = string.Empty;
     public string EmployeeName { get; set; } = string.Empty;
-
-    // Needed to calculate service years for entitlement
     public DateTime JoinDate { get; set; }
+    public int? ManagerId { get; set; }
 }
 
 public class ReviewLeaveRequest
@@ -25,6 +24,7 @@ public class LeaveRequestResponse
 {
     public int Id { get; set; }
     public int EmployeeId{ get; set; }
+    public int? ManagerId { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
     public string LeaveType { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
